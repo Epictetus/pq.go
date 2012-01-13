@@ -46,6 +46,9 @@ func OpenRaw(uarel string) (*Conn, error) {
 	}
 
 	pw, _ := u.User.Password()
+	if sslMode == SslModeNever {
+		return New(nc, params, pw)
+	}
 	return NewWithSsl(nc, params, pw)
 }
 
@@ -53,6 +56,29 @@ var defaultDriver = &Driver{}
 
 func init() {
 	sql.Register("postgres", defaultDriver)
+}
+
+const (
+	SslModeNever   = 0
+	SslModeAttempt = 1
+	SslModeForced  = 2
+)
+
+var sslMode = SslModeAttempt
+
+func SetSslMode(mode int) error {
+	if mode < 0 || mode > 2 {
+		return fmt.Errorf("pq: Invalid SSL mode \"%d\"", mode)
+	}
+	sslMode = mode
+	return nil
+}
+
+var sslVerifyPeer = true
+
+func SetSslVerifyPeer(mode bool) {
+	sslVerifyPeer = mode
+	return
 }
 
 type Conn struct {
@@ -68,13 +94,24 @@ type Conn struct {
 	err error
 }
 
-func NewWithSsl(rwc *net.TCPConn, params proto.Values, pw string) (*Conn, error) {
+func NewWithSsl(rwc net.Conn, params proto.Values, pw string) (*Conn, error) {
 	enabled, err := proto.SslRequest(rwc)
 	if err != nil {
 		return nil, err
 	}
-	if enabled {
-		return New(tls.Client(rwc, nil), params, pw)
+
+	if !enabled && sslMode == SslModeForced {
+		rwc.Close()
+		return nil, fmt.Errorf("pq: SSLRequest denied with SslModeForced")
+	} else if enabled {
+		c := tls.Client(rwc, &tls.Config{InsecureSkipVerify: !sslVerifyPeer})
+		err = c.Handshake()
+		if err != nil {
+			rwc.Close()
+			return nil, fmt.Errorf("pq: SSL handshake failed - %q", err.Error())
+		}
+
+		return New(c, params, pw)
 	}
 	return New(rwc, params, pw)
 }
