@@ -8,8 +8,13 @@ import (
 	"testing"
 )
 
+func LocalAddr() *net.TCPAddr {
+	addr, _ := net.ResolveTCPAddr("tcp", "localhost:5432")
+	return addr
+}
+
 func TestConnPrepareErr(t *testing.T) {
-	nc, err := net.Dial("tcp", "localhost:5432")
+	nc, err := net.DialTCP("tcp", nil, LocalAddr())
 	assert.Equalf(t, nil, err, "%v", err)
 
 	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")}, "")
@@ -19,8 +24,19 @@ func TestConnPrepareErr(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 }
 
+func TestSsl(t *testing.T) {
+	nc, err := net.DialTCP("tcp", nil, LocalAddr())
+	assert.Equalf(t, nil, err, "%v", err)
+
+	cn, err := NewWithSsl(nc, map[string]string{"user": os.Getenv("USER")}, "")
+	assert.Equalf(t, nil, err, "%v", err)
+
+	_, err = cn.Prepare("SELECT 1")
+	assert.Equal(t, nil, err)
+}
+
 func TestConnPrepare(t *testing.T) {
-	nc, err := net.Dial("tcp", "localhost:5432")
+	nc, err := net.DialTCP("tcp", nil, LocalAddr())
 	assert.Equalf(t, nil, err, "%v", err)
 
 	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")}, "")
@@ -51,7 +67,7 @@ func TestConnPrepare(t *testing.T) {
 }
 
 func TestConnNotify(t *testing.T) {
-	nc, err := net.Dial("tcp", "localhost:5432")
+	nc, err := net.DialTCP("tcp", nil, LocalAddr())
 	assert.Equalf(t, nil, err, "%v", err)
 
 	cn, err := New(nc, map[string]string{"user": os.Getenv("USER")}, "")
