@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"github.com/bmizerany/pq.go/proto"
+	"github.com/bgentry/pq.go/proto"
 	"io"
 	"net"
 	"net/url"
