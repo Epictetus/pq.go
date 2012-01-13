@@ -33,6 +33,28 @@ func (vs Values) Del(k string) {
 	delete(vs, k)
 }
 
+func SslRequest(cn io.ReadWriter) (bool, error) {
+	err := binary.Write(cn, binary.BigEndian, int32(8))
+	if err != nil {
+		return false, err
+	}
+
+	b := NewBuffer(nil)
+	b.WriteInt32(int32(80877103))
+	_, err = b.WriteTo(cn)
+	if err != nil {
+		return false, err
+	}
+
+	// Read response
+	resp := make([]byte, 1, 1)
+	_, err = cn.Read(resp)
+	if err != nil {
+		return false, err
+	}
+	return (resp[0] == 'S'), nil
+}
+
 type Conn struct {
 	b   *Buffer
 	scr *scanner

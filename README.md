@@ -6,13 +6,12 @@
 			_ "github.com/bmizerany/pq.go"
 		)
 
-		db, err := sql.Open("postgres", "postgres://blake:@locahost:5432")
+		db, err := sql.Open("postgres", "postgres://blake:@localhost:5432")
 		if err != nil {
 			log.Print(err)
 		}
 
-
-## Unnamed Prepeared Query
+## Unnamed Prepared Query
 
 		rows, err := db.Query("SELECT length($1) AS foo", "hello")
 		if err != nil {
@@ -38,9 +37,9 @@
 ## Notifications
 
 Notifications can't be accessed via the exp/sql package. You will need to use
-pq.OpenRaw to obtain a single connection for listenting.  NOTE: It is recommend
-to only use this connection for reading notifiactions and to use the exp/sql
-API for all other operations. This may change in the future.
+pq.OpenRaw to obtain a single connection for listening.  NOTE: It is
+recommended to only use this connection for reading notifications and to use
+the exp/sql API for all other operations. This may change in the future.
 
 **Example**
 
@@ -67,6 +66,11 @@ API for all other operations. This may change in the future.
 
 **To Know**
 
-When one or more LISTEN's are active, it is the responsiblity of the user to
+When one or more LISTEN's are active, it is the responsibility of the user to
 drain the `db.Notifies` channel; Failing to do so causes reads on the
 connection to block if there are pending notifications on the connection.
+
+## SSL
+
+pq.go always requests SSL from the Postgres server. Encryption is then enabled
+if the server is configured to allow it.

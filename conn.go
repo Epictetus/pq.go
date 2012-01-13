@@ -1,6 +1,7 @@
 package pq
 
 import (
+	"crypto/tls"
 	"exp/sql"
 	"exp/sql/driver"
 	"fmt"
@@ -29,7 +30,12 @@ func OpenRaw(uarel string) (*Conn, error) {
 		u.Host += ":5432"
 	}
 
-	nc, err := net.Dial("tcp", u.Host)
+	addr, err := net.ResolveTCPAddr("tcp", u.Host)
+	if err != nil {
+		return nil, err
+	}
+
+	nc, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +51,7 @@ func OpenRaw(uarel string) (*Conn, error) {
 		params.Set("database", path.Base(u.Path))
 	}
 
-	return New(nc, params, pw)
+	return NewWithSsl(nc, params, pw)
 }
 
 var defaultDriver = &Driver{}
@@ -65,6 +71,17 @@ type Conn struct {
 	rwc io.ReadWriteCloser
 	p   *proto.Conn
 	err error
+}
+
+func NewWithSsl(rwc *net.TCPConn, params proto.Values, pw string) (*Conn, error) {
+	enabled, err := proto.SslRequest(rwc)
+	if err != nil {
+		return nil, err
+	}
+	if enabled {
+		return New(tls.Client(rwc, nil), params, pw)
+	}
+	return New(rwc, params, pw)
 }
 
 func New(rwc io.ReadWriteCloser, params proto.Values, pw string) (*Conn, error) {
